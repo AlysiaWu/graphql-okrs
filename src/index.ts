@@ -1,42 +1,58 @@
-import { ApolloServer, gql } from "apollo-server";
+import { ApolloServer } from "apollo-server";
+import { RequestOptions } from "http";
+import { get } from "https";
 
-// This is a (sample) collection of books we'll be able to query
-// the GraphQL server for.  A more complete example might fetch
-// from an existing data source like a REST API or database.
-const books = [
-  {
-    author: "J.K. Rowling",
-    title: "Harry Potter and the Chamber of Secrets",
-  },
-  {
-    author: "Michael Crichton",
-    title: "Jurassic Park",
-  },
-];
+import { typeDefs } from "./schema";
 
-// Type definitions define the "shape" of your data and specify
-// which ways the data can be fetched from the GraphQL server.
-const typeDefs = gql`
-  # Comments in GraphQL are defined with the hash (#) symbol.
+const makeRequest = (options: RequestOptions) => new Promise((resolve, reject) => {
+    get(options, (res) => {
+        let result = "";
+        res.on("data", (chunk) => result += chunk);
+        res.on("end", () => resolve(JSON.parse(result)));
+        res.on("error", (err) => reject(err));
+    });
+});
 
-  # This "Book" type can be used in other type declarations.
-  type Book {
-    title: String
-    author: String
-  }
+const transformKeyResult = (okr: any) => ({
+    description: okr["Key Result"],
+    priority: okr.Priority,
+    score: okr.Score,
+    status: okr.Status,
+});
 
-  # The "Query" type is the root of all GraphQL queries.
-  # (A "Mutation" type will be covered later on.)
-  type Query {
-    books: [Book]
-  }
-`;
+const transformOKR = (okrs: [any]) => okrs.reduce((accumulator: [any], okr) => {
+    if (okr.Objective) {
+        accumulator.push({
+            keyResults: [transformKeyResult(okr)],
+            title: okr.Objective,
+        });
+    } else {
+        const prevOKR = accumulator[accumulator.length - 1].keyResults;
+        prevOKR.push(transformKeyResult(okr));
+    }
+    return accumulator;
+}, []);
+
+const user = "btnqE34y9gpzaLumoSXC";
+const psw = "63y2ES2DD7B8VDPqpX9eHWU6sfnsnYWJxAKPLtTR";
+const auth = Buffer.alloc(`${user}:${psw}`.length, `${user}:${psw}`).toString("base64");
+
+const getObjectives = () => makeRequest({
+    headers: {
+        Authorization: `Basic ${auth}`,
+     },
+    host: "sheetsu.com",
+    method: "GET",
+    path: "/apis/v1.0su/8779c0223ca5",
+    port: 443,
+}).then((okrs) => transformOKR(okrs as [any]));
 
 // Resolvers define the technique for fetching the types in the
 // schema.  We'll retrieve books from the "books" array above.
 const resolvers = {
   Query: {
-    books: () => books,
+    // tslint:disable-next-line:no-console
+    objectives: getObjectives,
   },
 };
 
