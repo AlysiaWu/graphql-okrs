@@ -1,0 +1,24 @@
+{
+  "name": "graphql-okrs",
+  "version": "1.0.0",
+  "description": "GraphQL server for reading OKRs",
+  "main": "./dist/index.js",
+  "scripts": {
+    "start": "node ./dist/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "graphql",
+    "sheets"
+  ],
+  "author": "Nick Nance",
+  "license": "ISC",
+  "devDependencies": {
+    "tslint": "^5.11.0",
+    "typescript": "^3.0.1"
+  },
+  "dependencies": {
+    "apollo-server": "^2.0.5",
+    "graphql": "^0.13.2"
+  }
+}
