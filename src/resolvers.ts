@@ -1,25 +1,30 @@
 import { getObjectives } from "./connector";
 
-const transformKeyResult = (okr: any) => ({
-    description: okr["Key Result"],
-    priority: okr.Priority,
-    score: okr.Score,
-    status: okr.Status,
-});
+interface IOKR {
+    "Key Result": string;
+    Objective: string;
+    Priority: string;
+    Score: string;
+    Status: string;
+}
 
-const transformOKR = (okrs: [any]) => okrs.reduce((accumulator: [any], okr) => {
+export const KeyResult = {
+    description: (okr: IOKR) => okr["Key Result"],
+    priority: (okr: IOKR) => okr.Priority,
+    score: (okr: IOKR) => okr.Score,
+    status: (okr: IOKR) => okr.Status,
+};
+
+const transformOKR = (okrs: {}) => (okrs as [any]).reduce((accumulator: [any], okr) => {
     if (okr.Objective) {
-        accumulator.push({
-            keyResults: [transformKeyResult(okr)],
+        return accumulator.concat({
+            keyResults: [okr],
             title: okr.Objective,
         });
     } else {
-        const prevOKR = accumulator[accumulator.length - 1].keyResults;
-        prevOKR.push(transformKeyResult(okr));
+        accumulator[accumulator.length - 1].keyResults.push(okr);
+        return accumulator;
     }
-    return accumulator;
 }, []);
 
-const transformOKRs = (okrs: any) => transformOKR(okrs);
-
-export const objectives = () => getObjectives().then(transformOKRs);
+export const objectives = () => getObjectives().then(transformOKR);

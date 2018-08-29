@@ -1,11 +1,12 @@
 import { ApolloServer } from "apollo-server";
 
-import { objectives } from "./resolvers";
+import { KeyResult, objectives } from "./resolvers";
 import { typeDefs } from "./schema";
 
 // Resolvers define the technique for fetching the types in the
 // schema.
 const resolvers = {
+  KeyResult,
   Query: {
     // tslint:disable-next-line:no-console
     objectives,
