@@ -1,4 +1,4 @@
-import { getObjectives } from "./connector";
+import { getObjectives } from "./google-api";
 
 interface IOKR {
     "Key Result": string;
