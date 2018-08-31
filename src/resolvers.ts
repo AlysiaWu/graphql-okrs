@@ -15,16 +15,4 @@ export const KeyResult = {
     status: (okr: IOKR) => okr.Status,
 };
 
-const transformOKR = (okrs: {}) => (okrs as [any]).reduce((accumulator: [any], okr) => {
-    if (okr.Objective) {
-        return accumulator.concat({
-            keyResults: [okr],
-            title: okr.Objective,
-        });
-    } else {
-        accumulator[accumulator.length - 1].keyResults.push(okr);
-        return accumulator;
-    }
-}, []);
-
-export const objectives = () => getObjectives().then(transformOKR);
+export const objectives = () => getObjectives();

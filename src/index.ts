@@ -3,6 +3,8 @@ import { ApolloServer } from "apollo-server";
 import { KeyResult, objectives } from "./resolvers";
 import { typeDefs } from "./schema";
 
+// import { getObjectives } from "./google-api";
+
 // Resolvers define the technique for fetching the types in the
 // schema.
 const resolvers = {
