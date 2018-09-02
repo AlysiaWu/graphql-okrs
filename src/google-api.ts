@@ -6,7 +6,10 @@ import readline from "readline";
 // tslint:disable:no-console
 
 // If modifying these scopes, delete token.json.
-const SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"];
+const SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets.readonly",
+    "https://www.googleapis.com/auth/drive.readonly",
+];
 const TOKEN_PATH = "token.json";
 
 interface ICredentials {
@@ -28,7 +31,7 @@ export function getObjectives() {
             }
             // Authorize a client with credentials, then call the Google Sheets API.
             authorize(JSON.parse(content), (client) => {
-                getContent(client, transformOKR(resolve));
+                listFiles(client, transformOKR(resolve));
             });
         });
     });
@@ -117,24 +120,54 @@ function getNewToken(oAuth2Client: OAuth2Client, callback: AuthCallback) {
 }
 
 /**
- * Prints the names and majors of students in a sample spreadsheet:
- * @see https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
- * @param {google.auth.OAuth2} auth The authenticated Google OAuth client.
+ * Lists the names and IDs of up to 10 files.
+ * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  */
-function getContent(auth: OAuth2Client, callback: (values: [string]) => void) {
+function listFiles(auth: OAuth2Client, callback: (values: [string]) => void, q?: string) {
+    const drive = google.drive({version: "v3", auth});
+    drive.files.list({
+        fields: "nextPageToken, files(id, name)",
+        pageSize: 20,
+        q: q || "name = 'okrs' and mimeType = 'application/vnd.google-apps.folder'",
+    }, (err: any, res: {data: {files: [{id: string, name: string}]}}) => {
+        if (err) {
+            return console.log("The API returned an error: " + err);
+        }
+        const files = res.data.files;
+        if (files.length) {
+            console.log("Files:");
+            files.map((file) => {
+                console.log(`${file.name} (${file.id})`);
+            });
+            if (q) {
+                getContent(auth, files[0].id).then(callback);
+            } else {
+                listFiles(auth, callback, `'${files[0].id}' in parents`);
+            }
+        } else {
+            console.log("No files found.");
+        }
+    });
+  }
+
+function getContent(auth: OAuth2Client, spreadsheetId: string): Promise<[string]> {
   const sheets = google.sheets({version: "v4", auth});
-  sheets.spreadsheets.values.get({
-    range: "Sheet1!A2:F7",
-    spreadsheetId: "1-EVPk_bBwUKkQlnkuFoslFi2OLiqgd9lFoKbRZ3tjZE",
-  }, (err: any, res: {data: {values: [string]}}) => {
-    if (err) {
-        return console.log("The API returned an error: " + err);
-    }
-    const rows = res.data.values;
-    if (rows.length) {
-      callback(rows);
-    } else {
-      console.log("No data found.");
-    }
+  return new Promise((resolve, reject) => {
+      sheets.spreadsheets.values.get({
+        range: "Sheet1!A2:F7",
+        spreadsheetId,
+      }, (err: any, res: {data: {values: [string]}}) => {
+        if (err) {
+            console.log("The API returned an error: " + err);
+            reject(err);
+        }
+        const rows = res.data.values;
+        if (rows.length) {
+            resolve(rows);
+        } else {
+            console.log("No data found.");
+            reject(new Error("No data found."));
+        }
+      });
   });
 }
