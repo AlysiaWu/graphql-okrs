@@ -62,7 +62,7 @@ export function getClient(): Promise<any> {
                 reject(err);
             }
             // Authorize a client with credentials, then call the Google Sheets API.
-            authorize(JSON.parse(content), resolve);
+            resolve(authorize(JSON.parse(content)));
         });
     });
 }
@@ -70,31 +70,29 @@ export function getClient(): Promise<any> {
 /**
  * Create an OAuth2 client with the given credentials, and then execute the
  * given callback function.
- * @param {Object} credentials The authorization client credentials.
- * @param {function} callback The callback to call with the authorized client.
  */
-function authorize(credentials: ICredentials, callback: AuthCallback) {
+function authorize(credentials: ICredentials): Promise<OAuth2Client> {
     const {client_secret, client_id, redirect_uris} = credentials.installed;
     const oAuth2Client = new google.auth.OAuth2(
         client_id, client_secret, redirect_uris[0]);
 
-    // Check if we have previously stored a token.
-    fs.readFile(TOKEN_PATH, "utf8", (err, token) => {
-        if (err) {
-            return getNewToken(oAuth2Client, callback);
-        }
-        oAuth2Client.setCredentials(JSON.parse(token));
-        callback(oAuth2Client);
+    return new Promise((resolve, reject) => {
+        // Check if we have previously stored a token.
+        fs.readFile(TOKEN_PATH, "utf8", (err, token) => {
+            if (err) {
+                resolve(getNewToken(oAuth2Client));
+            }
+            oAuth2Client.setCredentials(JSON.parse(token));
+            resolve(oAuth2Client);
+        });
     });
 }
 
 /**
  * Get and store new token after prompting for user authorization, and then
  * execute the given callback with the authorized OAuth2 client.
- * @param {google.auth.OAuth2} oAuth2Client The OAuth2 client to get token for.
- * @param {getEventsCallback} callback The callback for the authorized client.
  */
-function getNewToken(oAuth2Client: OAuth2Client, callback: AuthCallback) {
+function getNewToken(oAuth2Client: OAuth2Client): Promise<OAuth2Client> {
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: "offline",
     scope: SCOPES,
@@ -104,24 +102,28 @@ function getNewToken(oAuth2Client: OAuth2Client, callback: AuthCallback) {
     input: process.stdin,
     output: process.stdout,
   });
-  rl.question("Enter the code from that page here: ", (code) => {
-    rl.close();
-    oAuth2Client.getToken({code}, (err, token) => {
-      if (err) {
-          return logger("Error while trying to retrieve access token", err);
-      }
-      if (token) {
-          oAuth2Client.setCredentials(token);
-          // Store the token to disk for later program executions
-          fs.writeFile(TOKEN_PATH, JSON.stringify(token), (tokenErr) => {
-            if (tokenErr) {
-                logger(tokenErr);
-            }
-            logger("Token stored to", TOKEN_PATH);
-          });
-          callback(oAuth2Client);
-      }
-    });
+  return new Promise((resolve, reject) => {
+      rl.question("Enter the code from that page here: ", (code) => {
+        rl.close();
+        oAuth2Client.getToken({code}, (err, token) => {
+          if (err) {
+              logger("Error while trying to retrieve access token", err);
+              reject(err);
+          }
+          if (token) {
+              oAuth2Client.setCredentials(token);
+              // Store the token to disk for later program executions
+              fs.writeFile(TOKEN_PATH, JSON.stringify(token), (tokenErr) => {
+                if (tokenErr) {
+                    logger(tokenErr);
+                    reject(tokenErr);
+                }
+                logger("Token stored to", TOKEN_PATH);
+              });
+              resolve(oAuth2Client);
+          }
+        });
+      });
   });
 }
 
