@@ -15,4 +15,4 @@ export const KeyResult = {
     status: (okr: IOKR) => okr.Status,
 };
 
-export const objectives = () => getObjectives();
+export const files = () => getObjectives();

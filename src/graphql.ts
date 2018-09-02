@@ -1,6 +1,6 @@
 import { makeExecutableSchema } from "apollo-server-express";
 
-import { KeyResult, objectives } from "./resolvers";
+import { files, KeyResult } from "./resolvers";
 import { typeDefs } from "./schema";
 
 import { graphqlExpress } from "apollo-server-express/dist/expressApollo";
@@ -10,7 +10,7 @@ import { graphqlExpress } from "apollo-server-express/dist/expressApollo";
 const resolvers = {
   KeyResult,
   Query: {
-    objectives,
+    files,
   },
 };
 

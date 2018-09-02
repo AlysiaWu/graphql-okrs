@@ -14,6 +14,7 @@
 .gitignore
 .vscode
 tslint.json
+credentials.json
 
 src
 node_modules

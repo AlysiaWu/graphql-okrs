@@ -28,26 +28,22 @@ interface IFile {
 }
 
 // Load client secrets from a local file.
-export function getObjectives() {
-    return new Promise((resolve, reject) => {
-        fs.readFile("credentials.json", "utf8", (err, content) => {
-            if (err) {
-                return console.log("Error loading client secret file:", err);
-            }
-            // Authorize a client with credentials, then call the Google Sheets API.
-            authorize(JSON.parse(content), async (client) => {
-                const folderQuery = "name = 'okrs' and mimeType = 'application/vnd.google-apps.folder'";
-                const okrFolder = await listFiles(client, folderQuery);
-                const files = await listFiles(client, `'${okrFolder[0].id}' in parents`);
-                const rows = await getContent(client, files[0].id);
-                resolve(transformOKR(rows));
-            });
-        });
-    });
+export async function getObjectives(): Promise<any[]> {
+    const folderQuery = "name = 'okrs' and mimeType = 'application/vnd.google-apps.folder'";
+
+    const client = await getClient();
+    const okrFolder = await listFiles(client, folderQuery);
+    const files = await listFiles(client, `'${okrFolder[0].id}' in parents`);
+    const okrs = await Promise.all(files.map((file) => {
+        const transform = transformOKR(file.id);
+        return getContent(client, file.id).then(transform);
+    }));
+    return(okrs);
 }
 
-const transformOKR = (okrs: [any]) => {
-    return okrs.reduce((accumulator: [any], okr) => {
+const transformOKR = (id: string) => (okrs: [any]) => ({
+    id,
+    objectives: okrs.reduce((accumulator: [any], okr) => {
         const kr = transformKeyResult(okr);
         if (okr[0]) {
             return accumulator.concat({
@@ -58,8 +54,8 @@ const transformOKR = (okrs: [any]) => {
             accumulator[accumulator.length - 1].keyResults.push(kr);
             return accumulator;
         }
-    }, []);
-};
+    }, []),
+});
 
 const transformKeyResult = (kr: [string]) => ({
     "Key Result": kr[1],
@@ -68,6 +64,20 @@ const transformKeyResult = (kr: [string]) => ({
     "Status": kr[3],
 
 });
+
+// Load client secrets from a local file.
+export function getClient(): Promise<any> {
+    return new Promise((resolve, reject) => {
+        fs.readFile("credentials.json", "utf8", (err, content) => {
+            if (err) {
+                console.log("Error loading client secret file:", err);
+                reject(err);
+            }
+            // Authorize a client with credentials, then call the Google Sheets API.
+            authorize(JSON.parse(content), resolve);
+        });
+    });
+}
 
 /**
  * Create an OAuth2 client with the given credentials, and then execute the
