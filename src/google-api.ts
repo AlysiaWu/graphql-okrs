@@ -22,6 +22,11 @@ interface ICredentials {
 
 type AuthCallback = (client: OAuth2Client) => void;
 
+interface IFile {
+    id: string;
+    name: string;
+}
+
 // Load client secrets from a local file.
 export function getObjectives() {
     return new Promise((resolve, reject) => {
@@ -30,15 +35,19 @@ export function getObjectives() {
                 return console.log("Error loading client secret file:", err);
             }
             // Authorize a client with credentials, then call the Google Sheets API.
-            authorize(JSON.parse(content), (client) => {
-                listFiles(client, transformOKR(resolve));
+            authorize(JSON.parse(content), async (client) => {
+                const folderQuery = "name = 'okrs' and mimeType = 'application/vnd.google-apps.folder'";
+                const okrFolder = await listFiles(client, folderQuery);
+                const files = await listFiles(client, `'${okrFolder[0].id}' in parents`);
+                const rows = await getContent(client, files[0].id);
+                resolve(transformOKR(rows));
             });
         });
     });
 }
 
-const transformOKR = (callback: (objectives: any) => void) => (okrs: [any]) => {
-    const objectives = okrs.reduce((accumulator: [any], okr) => {
+const transformOKR = (okrs: [any]) => {
+    return okrs.reduce((accumulator: [any], okr) => {
         const kr = transformKeyResult(okr);
         if (okr[0]) {
             return accumulator.concat({
@@ -50,7 +59,6 @@ const transformOKR = (callback: (objectives: any) => void) => (okrs: [any]) => {
             return accumulator;
         }
     }, []);
-    callback(objectives);
 };
 
 const transformKeyResult = (kr: [string]) => ({
@@ -123,32 +131,32 @@ function getNewToken(oAuth2Client: OAuth2Client, callback: AuthCallback) {
  * Lists the names and IDs of up to 10 files.
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  */
-function listFiles(auth: OAuth2Client, callback: (values: [string]) => void, q?: string) {
+function listFiles(auth: OAuth2Client, q?: string): Promise<[IFile]> {
     const drive = google.drive({version: "v3", auth});
-    drive.files.list({
-        fields: "nextPageToken, files(id, name)",
-        pageSize: 20,
-        q: q || "name = 'okrs' and mimeType = 'application/vnd.google-apps.folder'",
-    }, (err: any, res: {data: {files: [{id: string, name: string}]}}) => {
-        if (err) {
-            return console.log("The API returned an error: " + err);
-        }
-        const files = res.data.files;
-        if (files.length) {
-            console.log("Files:");
-            files.map((file) => {
-                console.log(`${file.name} (${file.id})`);
-            });
-            if (q) {
-                getContent(auth, files[0].id).then(callback);
-            } else {
-                listFiles(auth, callback, `'${files[0].id}' in parents`);
+    return new Promise((resolve, reject) => {
+        drive.files.list({
+            fields: "nextPageToken, files(id, name)",
+            pageSize: 20,
+            q: q || "name = 'okrs' and mimeType = 'application/vnd.google-apps.folder'",
+        }, (err: any, res: {data: {files: [IFile]}}) => {
+            if (err) {
+                console.log("The API returned an error: " + err);
+                reject(err);
             }
-        } else {
-            console.log("No files found.");
-        }
+            const files = res.data.files;
+            if (files.length) {
+                console.log("Files:");
+                files.map((file) => {
+                    console.log(`${file.name} (${file.id})`);
+                });
+                resolve(files);
+            } else {
+                console.log("No files found.");
+                reject(new Error("No files found."));
+            }
+        });
     });
-  }
+}
 
 function getContent(auth: OAuth2Client, spreadsheetId: string): Promise<[string]> {
   const sheets = google.sheets({version: "v4", auth});
