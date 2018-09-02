@@ -2,9 +2,7 @@ import express, {Request, Response} from "express";
 
 import bodyParser from "body-parser";
 
-import { handler } from "./graphql";
-
-export const okrs = handler;
+import { handler as okrs } from "./graphql";
 
 const port = 4000;
 const app = express();

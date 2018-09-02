@@ -15,6 +15,7 @@
   "author": "Nick Nance",
   "license": "ISC",
   "devDependencies": {
+    "@types/debug": "0.0.30",
     "nodemon": "^1.18.3",
     "tslint": "^5.11.0",
     "typescript": "^3.0.1"
@@ -23,6 +24,7 @@
     "apollo-server": "^2.0.5",
     "apollo-server-express": "^2.0.4",
     "body-parser": "^1.18.3",
+    "debug": "^3.1.0",
     "express": "^4.16.3",
     "googleapis": "^27.0.0",
     "graphql": "^0.13.2"

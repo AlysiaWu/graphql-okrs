@@ -5,6 +5,7 @@ import { gql } from "apollo-server";
 export const typeDefs = gql`
   type File {
     id: String
+    name: String
     objectives: [Objective]
   }
 

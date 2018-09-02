@@ -27,7 +27,7 @@ export const files = async (obj: any, {name}: any): Promise<any[]> => {
     const okrFolder = await listFiles(client, folderQuery);
     const sheets = await listFiles(client, `'${okrFolder[0].id}' in parents`);
     const okrs = await Promise.all(sheets.map((file) => {
-        const transform = transformOKR(file.id);
+        const transform = transformOKR(file);
         return getContent(client, file.id).then(transform);
     }));
     return(okrs);

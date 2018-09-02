@@ -1,9 +1,10 @@
+import debug from "debug";
 import fs from "fs";
 import { OAuth2Client } from "google-auth-library";
 import { google } from "googleapis";
 import readline from "readline";
 
-// tslint:disable:no-console
+const logger = debug("google-api");
 
 // If modifying these scopes, delete token.json.
 const SCOPES = [
@@ -27,8 +28,9 @@ interface IFile {
     name: string;
 }
 
-export const transformOKR = (id: string) => (okrs: [any]) => ({
-    id,
+export const transformOKR = (file: {id: string, name: string}) => (okrs: [any]) => ({
+    id: file.id,
+    name: file.name,
     objectives: okrs.reduce((accumulator: [any], okr) => {
         const kr = transformKeyResult(okr);
         if (okr[0]) {
@@ -56,7 +58,7 @@ export function getClient(): Promise<any> {
     return new Promise((resolve, reject) => {
         fs.readFile("credentials.json", "utf8", (err, content) => {
             if (err) {
-                console.log("Error loading client secret file:", err);
+                logger("Error loading client secret file:", err);
                 reject(err);
             }
             // Authorize a client with credentials, then call the Google Sheets API.
@@ -97,7 +99,7 @@ function getNewToken(oAuth2Client: OAuth2Client, callback: AuthCallback) {
     access_type: "offline",
     scope: SCOPES,
   });
-  console.log("Authorize this app by visiting this url:", authUrl);
+  logger("Authorize this app by visiting this url:", authUrl);
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -106,16 +108,16 @@ function getNewToken(oAuth2Client: OAuth2Client, callback: AuthCallback) {
     rl.close();
     oAuth2Client.getToken({code}, (err, token) => {
       if (err) {
-          return console.error("Error while trying to retrieve access token", err);
+          return logger("Error while trying to retrieve access token", err);
       }
       if (token) {
           oAuth2Client.setCredentials(token);
           // Store the token to disk for later program executions
           fs.writeFile(TOKEN_PATH, JSON.stringify(token), (tokenErr) => {
             if (tokenErr) {
-                console.error(tokenErr);
+                logger(tokenErr);
             }
-            console.log("Token stored to", TOKEN_PATH);
+            logger("Token stored to", TOKEN_PATH);
           });
           callback(oAuth2Client);
       }
@@ -136,18 +138,18 @@ export function listFiles(auth: OAuth2Client, q?: string): Promise<[IFile]> {
             q: q || "name = 'okrs' and mimeType = 'application/vnd.google-apps.folder'",
         }, (err: any, res: {data: {files: [IFile]}}) => {
             if (err) {
-                console.log("The API returned an error: " + err);
+                logger("The API returned an error: " + err);
                 reject(err);
             }
             const files = res.data.files;
             if (files.length) {
-                console.log("Files:");
+                logger("Files:");
                 files.map((file) => {
-                    console.log(`${file.name} (${file.id})`);
+                    logger(`${file.name} (${file.id})`);
                 });
                 resolve(files);
             } else {
-                console.log("No files found.");
+                logger("No files found.");
                 reject(new Error("No files found."));
             }
         });
@@ -162,14 +164,14 @@ export function getContent(auth: OAuth2Client, spreadsheetId: string): Promise<[
         spreadsheetId,
       }, (err: any, res: {data: {values: [string]}}) => {
         if (err) {
-            console.log("The API returned an error: " + err);
+            logger("The API returned an error: " + err);
             reject(err);
         }
         const rows = res.data.values;
         if (rows.length) {
             resolve(rows);
         } else {
-            console.log("No data found.");
+            logger("No data found.");
             reject(new Error("No data found."));
         }
       });
