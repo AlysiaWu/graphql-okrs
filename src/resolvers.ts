@@ -1,4 +1,9 @@
-import { getObjectives } from "./google-api";
+import {
+    getClient,
+    getContent,
+    listFiles,
+    transformOKR,
+} from "./google-api";
 
 interface IOKR {
     "Key Result": string;
@@ -15,4 +20,15 @@ export const KeyResult = {
     status: (okr: IOKR) => okr.Status,
 };
 
-export const files = () => getObjectives();
+export const files = async (obj: any, {name}: any): Promise<any[]> => {
+    const folderQuery = `name = '${name}' and mimeType = 'application/vnd.google-apps.folder'`;
+
+    const client = await getClient();
+    const okrFolder = await listFiles(client, folderQuery);
+    const sheets = await listFiles(client, `'${okrFolder[0].id}' in parents`);
+    const okrs = await Promise.all(sheets.map((file) => {
+        const transform = transformOKR(file.id);
+        return getContent(client, file.id).then(transform);
+    }));
+    return(okrs);
+};

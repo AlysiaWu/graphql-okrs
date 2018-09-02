@@ -27,21 +27,7 @@ interface IFile {
     name: string;
 }
 
-// Load client secrets from a local file.
-export async function getObjectives(): Promise<any[]> {
-    const folderQuery = "name = 'okrs' and mimeType = 'application/vnd.google-apps.folder'";
-
-    const client = await getClient();
-    const okrFolder = await listFiles(client, folderQuery);
-    const files = await listFiles(client, `'${okrFolder[0].id}' in parents`);
-    const okrs = await Promise.all(files.map((file) => {
-        const transform = transformOKR(file.id);
-        return getContent(client, file.id).then(transform);
-    }));
-    return(okrs);
-}
-
-const transformOKR = (id: string) => (okrs: [any]) => ({
+export const transformOKR = (id: string) => (okrs: [any]) => ({
     id,
     objectives: okrs.reduce((accumulator: [any], okr) => {
         const kr = transformKeyResult(okr);
@@ -141,7 +127,7 @@ function getNewToken(oAuth2Client: OAuth2Client, callback: AuthCallback) {
  * Lists the names and IDs of up to 10 files.
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  */
-function listFiles(auth: OAuth2Client, q?: string): Promise<[IFile]> {
+export function listFiles(auth: OAuth2Client, q?: string): Promise<[IFile]> {
     const drive = google.drive({version: "v3", auth});
     return new Promise((resolve, reject) => {
         drive.files.list({
@@ -168,7 +154,7 @@ function listFiles(auth: OAuth2Client, q?: string): Promise<[IFile]> {
     });
 }
 
-function getContent(auth: OAuth2Client, spreadsheetId: string): Promise<[string]> {
+export function getContent(auth: OAuth2Client, spreadsheetId: string): Promise<[string]> {
   const sheets = google.sheets({version: "v4", auth});
   return new Promise((resolve, reject) => {
       sheets.spreadsheets.values.get({
