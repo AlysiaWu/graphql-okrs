@@ -4,7 +4,7 @@ import { OAuth2Client } from "google-auth-library";
 import { google } from "googleapis";
 import readline from "readline";
 
-const logger = debug("google-api");
+const logger = debug("google");
 
 // If modifying these scopes, delete token.json.
 const SCOPES = [
@@ -20,8 +20,6 @@ interface ICredentials {
         redirect_uris: string;
     };
 }
-
-type AuthCallback = (client: OAuth2Client) => void;
 
 interface IFile {
     id: string;
@@ -46,11 +44,10 @@ export const transformOKR = (file: {id: string, name: string}) => (okrs: [any]) 
 });
 
 const transformKeyResult = (kr: [string]) => ({
-    "Key Result": kr[1],
-    "Priority": kr[2],
-    "Score": kr[5],
-    "Status": kr[3],
-
+    description: kr[1],
+    priority: kr[2],
+    score: kr[5],
+    status: kr[3],
 });
 
 // Load client secrets from a local file.
@@ -129,7 +126,6 @@ function getNewToken(oAuth2Client: OAuth2Client): Promise<OAuth2Client> {
 
 /**
  * Lists the names and IDs of up to 10 files.
- * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  */
 export function listFiles(auth: OAuth2Client, q?: string): Promise<[IFile]> {
     const drive = google.drive({version: "v3", auth});

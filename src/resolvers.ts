@@ -5,20 +5,7 @@ import {
     transformOKR,
 } from "./google-api";
 
-interface IOKR {
-    "Key Result": string;
-    Objective: string;
-    Priority: string;
-    Score: string;
-    Status: string;
-}
-
-export const KeyResult = {
-    description: (okr: IOKR) => okr["Key Result"],
-    priority: (okr: IOKR) => okr.Priority,
-    score: (okr: IOKR) => okr.Score,
-    status: (okr: IOKR) => okr.Status,
-};
+import { getFromFirebase } from "./firebase-api";
 
 export const files = async (obj: any, {name}: any): Promise<any[]> => {
     const folderQuery = `name = '${name}' and mimeType = 'application/vnd.google-apps.folder'`;
@@ -30,5 +17,6 @@ export const files = async (obj: any, {name}: any): Promise<any[]> => {
         const transform = transformOKR(file);
         return getContent(client, file.id).then(transform);
     }));
-    return(okrs);
+    const dbOkrs: [any] = await getFromFirebase();
+    return(okrs.concat(dbOkrs));
 };
